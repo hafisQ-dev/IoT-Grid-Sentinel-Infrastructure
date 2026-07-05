@@ -1,0 +1,5 @@
+.env
+*.pem
+.terraform/
+terraform/.terraform/
+__pycache__/

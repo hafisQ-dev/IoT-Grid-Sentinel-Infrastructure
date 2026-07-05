@@ -1,0 +1,62 @@
+---
+# Main playbook configuration for server initialization
+- name: Initialisation and Deployment of Transformer Infrastructure
+  hosts: trafo-server
+  become: yes # Runs all tasks with sudo privileges
+
+  tasks:
+    # Task 1: System update and main package installation
+    - name: Update apt cache and install all required packages and Docker
+      apt:
+        update_cache: yes # Runs 'sudo apt update' to refresh the package list
+        force_apt_get: yes # Forces using traditional apt-get to prevent lock issues
+        state: present # Ensures the listed packages are installed
+        name: 
+          - apt-transport-https # Infrastructure for secure HTTPS repositories
+          - ca-certificates # Security certificates for trusted internet connections
+          - curl # Command-line tool for downloading data from links
+          - gnupg # OpenPGP encryption tool for package signature verification
+          - lsb-release # Utility to detect the specific Ubuntu version details
+          - python3-pip # Python package manager for potential future automation
+          - docker.io # The core Docker application engine
+          - docker-compose-v2 # The modern Docker Compose engine
+
+    # Task 2: Service management
+    - name: Ensure Docker is Activated
+      systemd:
+        name: docker
+        state: started # Starts the Docker daemon if it is not running
+        enabled: yes # Configures Docker to launch automatically on server boot
+
+    # Task 3: Infrastructure directory preparation
+    - name: Establish your file directory
+      file:
+        path: /home/ubuntu/trasformer_infrastructure # Destination folder path
+        state: directory # Tells Ansible to create a folder, not a plain file
+        owner: ubuntu # Assigns directory ownership to ubuntu user
+        group: ubuntu # Assigns directory group ownership to ubuntu group
+        mode: '0755' # Standard folder permissions (Owner: read/write/execute, Others: read/execute)
+
+    # Task 4: Configuration file transfer
+    - name: Copy Compose file to server
+      copy:
+        src: ./compose.yml # Source file location on your local machine
+        dest: /home/ubuntu/trasformer_infrastructure/compose.yml # Target path on the server
+        owner: ubuntu
+        group: ubuntu
+        mode: '0644' # Standard file permissions (Owner: read/write, Others: read-only)
+
+    # Task 5: Sensitive data transfer
+    - name: Copy .env file to server
+      copy:
+        src: ./.env # Source environment file containing secrets
+        dest: /home/ubuntu/trasformer_infrastructure/.env
+        owner: ubuntu
+        group: ubuntu
+        mode: '0600' # Secure file permissions (Only the owner can read and write)
+
+    # Task 6: Application deployment
+    - name: Run Docker compose Infrastructure
+      command:
+        cmd: docker compose up -d # Command to build and start containers in the background
+        chdir: /home/ubuntu/trasformer_infrastructure/ # Switches to this directory before running the command
